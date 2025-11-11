@@ -168,9 +168,15 @@ if (-Not (Test-Path ".gitignore")) {
 # Step 6: Create .env handling (Guaranteed Privacy Fix)
 $envFile = ".env"
 
+# Ensure .env exists (empty if not)
+if (-not (Test-Path $envFile)) {
+    New-Item -ItemType File -Path $envFile | Out-Null
+    Write-Host "Created new .env file."
+}
+
 if ($promptForApiKey) {
-    # This part only runs if you set $promptForApiKey to $true at the top
-    Write-Host "Prompting for GEMINI_API key (input will be hidden)."
+    # Securely prompt for GEMINI_API_KEY
+    Write-Host "Prompting for GEMINI_API_KEY (input will be hidden)."
     $secure = Read-Host "Enter GEMINI_API_KEY (input hidden)" -AsSecureString
     $ptr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     try {
@@ -179,15 +185,25 @@ if ($promptForApiKey) {
     finally {
         [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
     }
-    $envLine = "GEMINI_API_KEY=$apiKey"
-    $envLine | Out-File -Encoding UTF8 $envFile
-    Write-Host ".env written locally. Do NOT commit this file."
+
+    # Overwrite or update GEMINI_API_KEY safely
+    $existing = if (Test-Path $envFile) { Get-Content $envFile } else { @() }
+    $filtered = $existing | Where-Object { $_ -notmatch '^GEMINI_API_KEY=' }
+    $filtered + "GEMINI_API_KEY=$apiKey" | Out-File -Encoding UTF8 $envFile
+
+    Write-Host ".env updated with GEMINI_API_KEY. Do NOT commit this file."
 }
 else {
-    # This is the default, safe behavior.
-    Write-Host "No GEMINI_API_KEY provided. Writing .env.template (do not commit secrets)."
-    "GEMINI_API_KEY=your_api_key_here" | Out-File -Encoding UTF8 $envTemplateFile
+    # Ensure .env at least contains a placeholder if empty
+    if ((Get-Content $envFile -ErrorAction SilentlyContinue | Measure-Object).Count -eq 0) {
+        "GEMINI_API_KEY=your_api_key_here" | Out-File -Encoding UTF8 $envFile
+        Write-Host "Wrote placeholder GEMINI_API_KEY to .env (safe default)."
+    }
+    else {
+        Write-Host ".env already exists. No changes made."
+    }
 }
+
 
 # Step 7: Create a focused README.md and Gemini.md
 $geminiFile = "Gemini.md"
