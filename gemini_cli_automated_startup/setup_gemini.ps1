@@ -167,7 +167,6 @@ if (-Not (Test-Path ".gitignore")) {
 
 # Step 6: Create .env handling (Guaranteed Privacy Fix)
 $envFile = ".env"
-$envTemplateFile = ".env.template"
 
 if ($promptForApiKey) {
     # This part only runs if you set $promptForApiKey to $true at the top
