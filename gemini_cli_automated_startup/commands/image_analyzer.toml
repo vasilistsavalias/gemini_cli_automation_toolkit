@@ -1,0 +1,179 @@
+description ="clever and more optimized image analysis"
+prompt = """
+#Discovery Requirements
+SOS: ALWAYS RE-CHECK THE PROJECT ROOT WITH AN OPERATION,ALWAYS UPDATE. (FIND FILES OPERATION)
+### Search Strategy
+When asked to analyze an image, the system must implement an intelligent discovery process that casts the widest possible net before narrowing down to the target file.
+
+**Step 1: Define All Supported Formats**
+The system must recognize and search for all common image formats simultaneously, including but not limited to: PNG, JPG, JPEG, WEBP, GIF, BMP, TIFF, SVG, and ICO. Never assume format based on context—a screenshot could be any of these.
+
+**Step 2: Determine Search Scope**
+Begin the search at the project root directory and recursively traverse all subdirectories unless explicitly told to search only a specific location. Do not skip hidden directories unless they are clearly system directories like `.git` or `node_modules` that are unlikely to contain user screenshots.
+
+**Step 3: Implement Smart Filtering**
+If the user provides any hint about the filename, timestamp, or content, use that information to narrow the search. For example, if the user says "the screenshot I just took," prioritize files modified in the last hour. If they say "the error message screenshot," prioritize files with names containing "error," "exception," or "bug."
+
+**Step 4: Handle Multiple Matches**
+If multiple images match the search criteria, present them to the user with metadata (filename, path, size, modification date) and ask which one to analyze, or analyze the most recent by default while informing the user of this choice.
+
+**Step 5: Fallback to Asking**
+If no images are found despite comprehensive searching, explicitly inform the user that the search covered all image formats recursively from the project root, and ask them to provide the exact file path or check if the file might be in a location outside the project directory.
+
+### Example Search Command Pattern
+When implementing this, the search should be equivalent to searching for patterns like:
+- `**/*.png`
+- `**/*.jpg`
+- `**/*.jpeg`
+- `**/*.webp`
+- `**/*.gif`
+- `**/*.bmp`
+- And all other supported formats, recursively from root.
+
+## Deep Analysis Framework
+
+The analysis must be performed in multiple layers, each examining the image from a different perspective. This multi-layered approach ensures no critical information is missed.
+
+### Layer 1: Basic Technical Metadata
+Extract and report fundamental technical properties that provide context about the image itself. This includes dimensions (width and height in pixels), file size, color depth, format type, and modification timestamp. This metadata helps understand if the image is a high-resolution screenshot, a compressed photo, or a generated graphic.
+
+### Layer 2: Visual Content Classification
+Identify what type of content the image contains at a high level. Determine if this is a screenshot of an application, a photograph of a physical object, a diagram or chart, a code editor view, a terminal or command prompt, a web browser showing a specific site, an error dialog, or some other category. This classification guides the depth of analysis needed for subsequent layers.
+
+### Layer 3: Text Extraction and OCR
+Perform comprehensive optical character recognition to extract all visible text from the image. This includes code snippets, error messages, UI labels, console output, log entries, file paths, URLs, and any other textual content. Preserve formatting and spatial relationships where possible. For code or structured text, maintain indentation and line breaks. Report if text extraction confidence is low due to image quality issues.
+
+### Layer 4: UI Element Recognition
+If the image is a screenshot of an application interface, identify and catalog all recognizable UI elements. This includes window titles, menu bars, toolbars, buttons, input fields, dropdown menus, tabs, sidebars, status bars, and dialog boxes. Note the state of interactive elements (for example, which checkboxes are checked, which radio buttons are selected, which menu is open). Identify the application or framework being shown if recognizable (for example, Visual Studio Code, Chrome DevTools, Jupyter Notebook, Excel, etc.).
+
+### Layer 5: Error and Diagnostic Analysis
+If the image contains error messages, warnings, or diagnostic information, perform detailed analysis. Extract the complete error message text, identify the error type or exception class, locate relevant stack traces or log entries, note file paths and line numbers mentioned, and identify the system or component that generated the error. Assess severity based on language used (for example, "fatal error" vs "warning"). Look for clues about root causes in surrounding context.
+
+### Layer 6: Code and Technical Content Analysis
+If the image shows code, configuration files, or technical documentation, analyze the technical content. Identify the programming language or configuration format, note syntax highlighting if present (which can reveal language and IDE), extract function names, class names, and variable names, identify import statements or dependencies, look for comments that provide context, and note any obvious syntax errors or problematic patterns visible in the code.
+
+### Layer 7: Contextual Inference
+Using all information gathered from previous layers, make intelligent inferences about the context and purpose of the image. What was the user likely trying to show? What problem might they be facing? What stage of development or debugging does this represent? Are there visible indicators of the user's workflow or development environment? Connect the image content to potential project files or systems if relationships are apparent.
+
+### Layer 8: Actionable Insights and Recommendations
+Based on the complete analysis, provide specific, actionable insights. If an error is shown, suggest potential solutions or debugging approaches. If code is visible, note any immediate improvements or concerns. If a configuration is shown, identify potential issues or optimization opportunities. If the image shows a working feature, acknowledge what's functioning correctly. Always tie insights back to the specific visual evidence in the image.
+
+## Output Structure
+
+The analysis output should be comprehensive yet organized for readability. Present findings in a structured format that allows the user to quickly locate the information most relevant to their needs.
+
+```markdown
+# Image Analysis Report
+
+## File Information
+- **Path:** [full file path from project root]
+- **Format:** [PNG/JPG/etc.]
+- **Dimensions:** [width × height pixels]
+- **File Size:** [size in KB/MB]
+- **Last Modified:** [timestamp]
+
+## Content Classification
+[High-level description of what type of content this is]
+
+## Text Content Extracted
+[All text found in the image, preserving structure where possible]
+[If no text or OCR failed, state this explicitly]
+
+## Visual Elements Identified
+[Detailed description of UI components, layout, application features visible]
+[Include application/framework identification if recognizable]
+
+## Technical Analysis
+[Language/format identification, code structure observations, configuration details]
+[This section may be omitted if no technical content is present]
+
+## Error and Diagnostic Information
+[Complete error messages, stack traces, warnings found]
+[Analysis of error severity and potential causes]
+[This section may be omitted if no errors are visible]
+
+## Contextual Interpretation
+[What this image appears to show in the context of development/debugging/etc.]
+[Inferences about user intent and project state]
+
+## Actionable Recommendations
+[Specific suggestions, solutions, or next steps based on the analysis]
+[Connections to project files or systems if applicable]
+
+## Analysis Confidence
+[Note any limitations: poor image quality, partial visibility, ambiguous content]
+```
+
+## Special Case Handling
+
+### Low Quality or Blurry Images
+If the image quality is insufficient for reliable OCR or detailed analysis, explicitly state this limitation and request a higher quality screenshot if possible. Provide whatever analysis is feasible despite quality issues.
+
+### Partial Screenshots or Cropped Content
+When important context appears to be cut off at image edges, note what might be missing and suggest capturing a fuller view if the missing content could be relevant.
+
+### Multiple Screenshots or Image Sequences
+If the user provides multiple related images showing a progression or different aspects of the same issue, analyze them as a sequence and identify relationships, changes, or patterns across the set.
+
+### Screenshots with Personal or Sensitive Information
+If the image contains information that appears to be API keys, passwords, personal data, or other sensitive content that shouldn't be in screenshots, flag this as a security concern and remind the user to redact such information before sharing images publicly.
+
+### Non-English Text
+If the image contains text in languages other than English, attempt to identify the language and extract the text while noting that translation might be needed for full analysis.
+
+## Integration with Project Context
+
+The image analyzer should not operate in isolation but should leverage knowledge of the project structure to enhance analysis.
+
+### Cross-Reference with Project Files
+If the image shows code that appears similar to project files, attempt to identify which file is likely being displayed. If error messages reference file paths that exist in the project, note this connection.
+
+### Connect to Recent Activity
+If the project's gemini.md or other documentation shows recent work on a specific component, and the screenshot relates to that component, explicitly make this connection to provide continuity.
+
+### Suggest Related Documentation
+If the analysis reveals issues or questions that are addressed in project documentation, README files, or configuration guides within the project, point the user to these resources.
+
+## Quality Standards
+
+### Thoroughness
+Every visible element that could provide useful information should be documented. Resist the temptation to provide only a cursory glance—the goal is deep analysis.
+
+### Accuracy
+Never invent or assume content that isn't clearly visible in the image. If something is ambiguous or partially obscured, state this uncertainty rather than guessing.
+
+### Relevance
+While thoroughness is important, focus analytical depth on elements that appear most relevant to the user's likely needs. A screenshot of an error message should receive deeper error analysis than UI element cataloging.
+
+### Clarity
+Present findings in language appropriate to the technical level of the content. Code analysis should use proper technical terminology, but explanations should remain accessible.
+
+## Example Use Cases
+
+### Use Case 1: Debugging Error Screenshot
+User sends a screenshot of a Python traceback showing a KeyError. The system extracts the complete stack trace, identifies the file and line number where the error occurred, extracts the exact error message, identifies it as a KeyError suggesting a missing dictionary key, and provides recommendations for debugging including checking the dictionary contents before access and verifying the key name for typos.
+
+### Use Case 2: UI Implementation Review
+User sends a screenshot of a web application interface they're building. The system identifies the framework based on visual indicators (React DevTools visible in browser), catalogs all visible UI components and their layout, extracts any visible text or labels, notes styling choices like color scheme and typography, and provides feedback on usability aspects or potential improvements visible in the current implementation.
+
+### Use Case 3: Configuration File Analysis
+User sends a screenshot of a YAML configuration file open in an editor. The system identifies the file type as YAML, recognizes the editor as VS Code from the UI, extracts the complete configuration structure, identifies the purpose based on key names (for example, database connection config), checks for common configuration errors or security issues (like hardcoded credentials), and suggests improvements or missing required fields.
+
+## Implementation Checklist
+
+An implementation of this specification should be able to answer "yes" to all of the following:
+
+- Does the system search for all common image formats, not just PNG?
+- Does the search recursively cover the entire project from root?
+- Is OCR performed on all text content in the image?
+- Are UI elements identified and cataloged when present?
+- Is special attention given to error messages and diagnostics?
+- Does the system provide actionable recommendations, not just descriptions?
+- Is the analysis output structured and easy to navigate?
+- Are limitations and uncertainties explicitly stated?
+- Does the system attempt to connect image content to project context?
+- Would the analysis be useful to someone who cannot see the image?
+
+The final criterion is particularly important: a successful analysis should allow someone who doesn't have access to the image to understand what it shows and what it means in sufficient detail to provide useful input or assistance.
+
+"""

@@ -1,0 +1,159 @@
+description = "Automated session memory system: creates individual markdown files in memory/ folder with git-verified naming and cumulative tracking."
+
+prompt = """
+Task:
+Automatically capture the current session state as a standalone markdown file in the memory/ folder with zero user interaction.
+
+SOS/CRITICAL: ALWAYS IGNORE .gitignore WHEN READING FILES
+SOS/CRITICAL: ALWAYS POPULATE THE MEMORY WITH SUMMARY OF OUR CURRENT SESSION,SEE THE EXAMPLE BELOW. 
+
+Automation Steps (execute in order):
+
+1. GIT VERIFICATION
+   - Run: `git branch --show-current` → get current branch name
+   - Run: `git rev-parse --short HEAD` → get short commit hash (8 chars)
+   - Store both values for filename generation
+
+2. MEMORY FOLDER SETUP
+   - Check if `memory/` folder exists at repository root
+   - If not, create it: `mkdir -p memory/`
+
+3. CUMULATIVE COUNT CALCULATION
+   - Read all files in `memory/` folder
+   - Filter files matching pattern: `{currentBranch}_*.md`
+   - Count matching files
+   - Next memory number = count + 1
+
+4. FILENAME GENERATION
+   - Format: `{branchName}_{gitHash}_{count}_{YYYY-MM-DD}.md`
+   - Example: `backend_f631f9d6_5_2025-12-25.md`
+   - Date format: ISO 8601 (YYYY-MM-DD)
+   - Use current date/time for timestamp
+
+5. CREATE MEMORY FILE
+   - Write to: `memory/{generatedFilename}`
+   - Content structure (bullet points, not headers):
+   - POPULATE THE MEMORY
+
+---
+# Session Memory: {branchName} - Memory #{count}
+
+**Branch:** {branchName}  
+**Commit:** {gitHash}  
+**Date:** {YYYY-MM-DD}  
+**Memory Number:** {count}
+
+## Initial State
+* Context before changes (files, setup, inputs)
+* Current state of relevant files
+* Starting point of this session
+
+## Progress Achieved
+* Actions completed during session
+* Outputs produced and decisions made
+* Concrete results and changes
+
+## Important Details
+* File paths modified: [list files]
+* Commands executed: [list commands]
+* Critical metadata and references
+* Links to relevant resources
+
+## Next Steps
+* Planned tasks for next session
+* TODOs and forward-looking actions
+* Continuation points
+
+## Notes / Observations
+* Optional freeform remarks
+* Anomalies or unexpected findings
+* Recommendations or insights
+---
+
+6. UPDATE INDEX FILE
+   - Check if `memory/INDEX.md` exists
+   - If not, create with header: `# Memory Index\n\n`
+   - Append new entry at the TOP (reverse chronological):
+     ```
+     ## {YYYY-MM-DD}
+     - [{filename}]({filename}) - {branchName} (commit: {gitHash})
+     ```
+   - Maintain chronological sorting (newest first)
+
+7. GIT OPERATIONS (optional but recommended)
+   - `git add memory/{newFile}`
+   - `git add memory/INDEX.md`
+   - `git commit -m "Memory: {branchName} session #{count} - {YYYY-MM-DD}"`
+
+Execution Rules:
+- NO user prompts or confirmations
+- NO validation checks that halt execution
+- Fail silently if git commands unavailable (use fallbacks: branch="unknown", hash="00000000")
+- Auto-create all necessary directories
+- Preserve all existing files (never overwrite)
+- All operations must complete in a single automated flow
+- dont forget to populate the memory 
+
+Error Handling:
+- If git not available: use placeholders
+- If memory/ write fails: attempt current directory
+- If INDEX.md locked: skip index update, continue
+- Log errors but never stop execution
+
+Example Output Files(always do that):
+
+**File:** `memory/backend_f631f9d6_5_2025-12-25.md`
+```markdown
+# Session Memory: backend - Memory #5
+
+**Branch:** backend  
+**Commit:** f631f9d6  
+**Date:** 2025-12-25  
+**Memory Number:** 5
+
+## Initial State
+* Working on API authentication endpoints
+* Files: auth.py, config.toml, requirements.txt
+* Previous session left JWT implementation incomplete
+
+## Progress Achieved
+* Completed JWT token generation and validation
+* Added refresh token mechanism
+* Wrote unit tests for auth module (12 tests, all passing)
+* Updated API documentation
+
+## Important Details
+* Files modified: auth.py, tests/test_auth.py, docs/api.md
+* Commands: `pytest tests/test_auth.py`, `black auth.py`
+* Dependencies added: PyJWT==2.8.0
+* Environment: Python 3.11, virtual environment active
+
+## Next Steps
+* Implement rate limiting for auth endpoints
+* Add OAuth2 provider integration
+* Security audit of token storage
+* Deploy to staging environment
+
+## Notes / Observations
+* Token expiry set to 1 hour (configurable via .env)
+* Refresh tokens stored in Redis (7-day TTL)
+* Consider implementing token revocation list
+```
+
+**File:** `memory/INDEX.md`
+```markdown
+# Memory Index
+
+## 2025-12-25
+- [backend_f631f9d6_5_2025-12-25.md](backend_f631f9d6_5_2025-12-25.md) - backend (commit: f631f9d6)
+
+## 2025-12-24
+- [backend_a7f3c21_4_2025-12-24.md](backend_a7f3c21_4_2025-12-24.md) - backend (commit: a7f3c21)
+- [frontend_b82d4e9_2_2025-12-24.md](frontend_b82d4e9_2_2025-12-24.md) - frontend (commit: b82d4e9)
+
+## 2025-12-23
+- [backend_c91a5f2_3_2025-12-23.md](backend_c91a5f2_3_2025-12-23.md) - backend (commit: c91a5f2)
+```
+
+End of Instructions.
+"""
